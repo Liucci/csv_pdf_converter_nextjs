@@ -38,18 +38,20 @@ def cleanup_startup():
 app =Flask(__name__)
 
 
-#app.register_blueprint(app2)
 # ---- Flask-Sessionの設定 ----
 app.config["SESSION_TYPE"] = "filesystem"  # サーバー側に保存
 app.config["SESSION_PERMANENT"] = False
-app.config["SESSION_FILE_DIR"] = "flask_session"  # 保存先フォルダ（任意）
+# backend フォルダを基準に相対パスを指定
+session_dir = os.path.join(os.path.dirname(__file__), "flask_session")
+app.config["SESSION_FILE_DIR"] = session_dir
 app.config["SESSION_USE_SIGNER"] = True  # セキュリティ強化
 app.config['DEBUG'] = True
 
 # ---- Sessionを初期化 ----
 Session(app)
 #uploadsフォルダの設定
-UPLOAD_FOLDER = 'uploads'
+# backend フォルダを基準に uploads フォルダのパスを指定
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-for-local")
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
