@@ -36,6 +36,7 @@ def cleanup_startup():
 
 
 app =Flask(__name__)
+
 CORS(app)
 
 # ---- Flask-Sessionの設定 ----
@@ -67,9 +68,10 @@ def add_cors_headers(response):
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
 
-@app.route("/ping")
+@app.route("/ping", methods=["GET", "OPTIONS"])
 def ping():
-    return "ok", 200
+    return jsonify({"status": "ok"}), 200
+
 
 @app.route("/upload", methods=["POST"])
 def upload():
@@ -470,5 +472,7 @@ def export_central_alarm_csv():
     )
 
 
+# ---- ポート設定＆起動 ----
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
