@@ -36,9 +36,12 @@ def cleanup_startup():
 
 
 app =Flask(__name__)
-#CORS設定 本番用にCookies対応
-#CORS(app, supports_credentials=True)
-
+# --- CORS 設定 ---
+# 本番の Next.js ドメインを指定
+CORS(app, supports_credentials=True, origins=[
+    "https://csv-pdf-converter-nextjs-1.onrender.com",
+    "http://localhost:3000"  # 開発用
+])
 
 
 # ---- Flask-Sessionの設定 ----
@@ -59,6 +62,8 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-for-local")
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+#動的CORS設定はいったんコメントアウト
+""" 
 @app.after_request
 # ---- 動的 CORS ----
 def add_cors_headers(response):
@@ -69,6 +74,7 @@ def add_cors_headers(response):
         response.headers["Access-Control-Allow-Headers"] = "Content-Type"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
+ """
 
 @app.route("/ping", methods=["GET", "OPTIONS"])
 def ping():
