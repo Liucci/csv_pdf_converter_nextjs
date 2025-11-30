@@ -37,7 +37,7 @@ def cleanup_startup():
 
 app =Flask(__name__)
 
-CORS(app)
+CORS(app, supports_credentials=True)
 
 # ---- Flask-Sessionの設定 ----
 app.config["SESSION_TYPE"] = "filesystem"  # サーバー側に保存
