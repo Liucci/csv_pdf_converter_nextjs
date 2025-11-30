@@ -37,7 +37,7 @@ def cleanup_startup():
 
 app =Flask(__name__)
 #CORS設定 本番用にCookies対応
-CORS(app, supports_credentials=True)
+#CORS(app, supports_credentials=True)
 
 
 
