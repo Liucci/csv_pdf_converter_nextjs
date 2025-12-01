@@ -1,6 +1,6 @@
 "use client";
 
-import "bootstrap/dist/css/bootstrap.min.css";
+import 'bootstrap/dist/css/bootstrap.min.css'; // Bootstrap
 import { useState,useRef,useEffect } from "react";
 import ColumnContainer from "./components/container";
 import MakeDropdownList from "./components/make_dropdownlist";
