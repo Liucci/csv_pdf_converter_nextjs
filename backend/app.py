@@ -98,6 +98,8 @@ def upload():
         df = csv_reader.load_csv(save_path)
         # セッションに保存
         session["df"] = df.to_json(orient="split")
+        print(df.head(5))
+        
         return jsonify({"message": "ファイルをアップロードしました"}), 200
 
     except Exception as e:
