@@ -109,6 +109,7 @@ def upload():
 def manual_filter():
         # セッションから DataFrame を取得
     df_json = session.get("df")
+    print("manual_filter df_json:", df_json.head(5) )
     if df_json is None:
         return jsonify({"error": "No DataFrame found in session"}), 400
         
