@@ -116,12 +116,14 @@ def upload():
 
 @app.route("/manual_filter", methods=["POST"])
 def manual_filter():
-        # セッションから DataFrame を取得
+    # セッションからpathを取得
     df_path = session.get("df_path")
+    print(f"/manual_filter df_path:{df_path}")
     if df_path is None:
         return jsonify({"error": "No DataFrame found in session"}), 400
         
     else:
+        #pathからdfを取得
         df = pd.read_json(df_path, orient="split")
         print(f"df:{df.head(5)}")
 
