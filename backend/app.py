@@ -11,6 +11,7 @@ from utils.pdf_utils.table_horizontal import TableHorizontal
 from io import StringIO,BytesIO
 from flask_cors import CORS
 import shutil
+import uuid
 
 # --- 起動時クリーニング ---
 def cleanup_startup():
@@ -95,12 +96,18 @@ def upload():
     file.save(save_path)
 
     # pandasで読み込み
+    #df作成し、uploadフォルダにjsonで保存
+    #sessionはdfのpathだけ保存
     try:
         df = csv_reader.load_csv(save_path)
-        # セッションに保存
-        #session["df"] = df.to_json(orient="split")
-        session["df"] = df
-        print(df.head(5))
+        # ユニークファイル名を生成
+        filename = f"{uuid.uuid4()}_df.json"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        # df を JSON として保存
+        df.to_json(filepath, orient="split")
+        # セッションにdfのpathだけ保存
+        session["df_path"] = filepath
+        print(f"df_path:{filepath}")
         
         return jsonify({"message": "ファイルをアップロードしました"}), 200
 
@@ -110,14 +117,13 @@ def upload():
 @app.route("/manual_filter", methods=["POST"])
 def manual_filter():
         # セッションから DataFrame を取得
-    df_json = session.get("df")
-    print("manual_filter df_json:", df_json.head(5) )
-    if df_json is None:
+    df_path = session.get("df_path")
+    if df_path is None:
         return jsonify({"error": "No DataFrame found in session"}), 400
         
     else:
-        df = pd.read_json(StringIO(df_json), orient="split")
-        print(df.head(5))
+        df = pd.read_json(df_path, orient="split")
+        print(f"df:{df.head(5)}")
 
 
         #コンテナ１に表示させる列名リスト
