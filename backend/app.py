@@ -40,6 +40,7 @@ app =Flask(__name__)
 # 本番の Next.js ドメインを指定
 CORS(app, supports_credentials=True, origins=[
     "https://csv-pdf-converter-nextjs-1.onrender.com",
+    "https://csv-pdf-converter-nextjs.onrender.com"
     "http://localhost:3000"  # 開発用
 ])
 
@@ -97,7 +98,8 @@ def upload():
     try:
         df = csv_reader.load_csv(save_path)
         # セッションに保存
-        session["df"] = df.to_json(orient="split")
+        #session["df"] = df.to_json(orient="split")
+        session["df"] = df
         print(df.head(5))
         
         return jsonify({"message": "ファイルをアップロードしました"}), 200
