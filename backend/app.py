@@ -8,32 +8,11 @@ from utils.csv_utils import csv_reader, df_filtered_by_columns, create_pivot_df
 from utils.pdf_utils import export_pdf
 from utils.pdf_utils.table_builder import PdfTableBuilder
 from utils.pdf_utils.table_horizontal import TableHorizontal
+from utils.save_files import save_json_file
 from io import StringIO,BytesIO
 from flask_cors import CORS
 import shutil
 import uuid
-
-# --- 起動時クリーニング ---
-def cleanup_startup():
-    folders = ["flask_session", "uploads"]
-
-    for folder in folders:
-        # フォルダが無ければ作成
-        if not os.path.exists(folder):
-            os.makedirs(folder, exist_ok=True)
-            continue
-
-        # --- 中身を削除（フォルダは残す） ---
-        for filename in os.listdir(folder):
-            file_path = os.path.join(folder, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)  # ファイル削除
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)  # サブフォルダ削除
-                print(f"[CLEAN] removed: {file_path}")
-            except Exception as e:
-                print(f"[CLEAN] failed to delete {file_path}: {e}")
 
 
 app =Flask(__name__)
@@ -41,42 +20,43 @@ app =Flask(__name__)
 # 本番の Next.js ドメインを指定
 CORS(app, supports_credentials=True, origins=[
     "https://csv-pdf-converter-nextjs-1.onrender.com",
-    "https://csv-pdf-converter-nextjs.onrender.com"
-    "http://localhost:3000"  # 開発用
+    "https://csv-pdf-converter-nextjs.onrender.com",
+    "http://localhost:3000",
+    "http://10.132.154.86:3000"
+     # 開発用
 ])
 
 
-# ---- Flask-Sessionの設定 ----
-app.config["SESSION_TYPE"] = "filesystem"  # サーバー側に保存
-app.config["SESSION_PERMANENT"] = False
-# backend フォルダを基準に相対パスを指定
-session_dir = os.path.join(os.path.dirname(__file__), "flask_session")
-app.config["SESSION_FILE_DIR"] = session_dir
-app.config["SESSION_USE_SIGNER"] = True  # セキュリティ強化
-app.config['DEBUG'] = True
-
-# ---- Sessionを初期化 ----
-Session(app)
 #uploadsフォルダの設定
 # backend フォルダを基準に uploads フォルダのパスを指定
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-for-local")
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['DEBUG'] = True
 
-#動的CORS設定はいったんコメントアウト
-""" 
-@app.after_request
-# ---- 動的 CORS ----
-def add_cors_headers(response):
-    origin = request.headers.get("Origin")
-    if origin:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    return response
- """
+
+# --- 起動時クリーニング ---
+
+def cleanup_startup():
+    folder = app.config['UPLOAD_FOLDER']  # 単一フォルダ
+    # フォルダがなければ作成
+    os.makedirs(folder, exist_ok=True)
+
+    # 中身を削除（フォルダは残す）
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+            print(f"[CLEAN] removed: {file_path}")
+        except Exception as e:
+            print(f"[CLEAN] failed to delete {file_path}: {e}")
+
+# Flask 起動前に呼ぶ
+cleanup_startup()
 
 @app.route("/ping", methods=["GET", "OPTIONS"])
 def ping():
@@ -91,24 +71,15 @@ def upload():
     file = request.files["file"]
     if file.filename == "":
         return jsonify({"error": "No file selected"}), 400
-
+    #元のCSVファイルをuploadsフォルダに保存
     save_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
     file.save(save_path)
 
-    # pandasで読み込み
-    #df作成し、uploadフォルダにjsonで保存
-    #sessionはdfのpathだけ保存
+
+    # df を uploads フォルダに JSON で保存
     try:
         df = csv_reader.load_csv(save_path)
-        # ユニークファイル名を生成
-        filename = f"{uuid.uuid4()}_df.json"
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        # df を JSON として保存
-        df.to_json(filepath, orient="split")
-        # セッションにdfのpathだけ保存
-        session["df_path"] = filepath
-        print(f"df_path:{filepath}")
-        
+        save_json_file(df, "df", overwrite=True, folder=app.config['UPLOAD_FOLDER'])
         return jsonify({"message": "ファイルをアップロードしました"}), 200
 
     except Exception as e:
@@ -116,15 +87,13 @@ def upload():
 
 @app.route("/manual_filter", methods=["POST"])
 def manual_filter():
-    # セッションからpathを取得
-    df_path = session.get("df_path")
-    print(f"/manual_filter df_path:{df_path}")
+    df_path = os.path.join(app.config['UPLOAD_FOLDER'], "df.json")
     if df_path is None:
         return jsonify({"error": "No DataFrame found in session"}), 400
         
     else:
         #pathからdfを取得
-        df = pd.read_json(df_path, orient="split")
+        df = pd.read_json(df_path, orient="records")
         print(f"df:{df.head(5)}")
 
 
@@ -135,62 +104,97 @@ def manual_filter():
     return jsonify({"columns": columns_name_list_1}), 200
 
 @app.route("/selected_cb1", methods=["POST"])
-def selected_cb1():
+def selected_cb1_route():
+    # uploadsから df.json を取得
+    df_path = os.path.join(app.config['UPLOAD_FOLDER'], "df.json")
+    if df_path is None:
+        return jsonify({"error": "No DataFrame found in session"}), 400
+    
+    df = pd.read_json(df_path, orient="records")
+
+    # Next.jsで選択された列名リストを取得
     selected_cb1 = request.json.get("selected_cb1", [])
+
+    # リストが空の場合
+    if not selected_cb1:
+        return jsonify({"error": "selected_cb1 が空です"}), 400
+
+    # コンソール出力
     print("選択された列名リスト:")
     for col in selected_cb1:
         print(f"・{col}")
 
-    # セッションから DataFrame を取得
-    df_json = session.get("df")
-    df = pd.read_json(StringIO(df_json), orient="split")
-
-    # 選択された列でフィルタリング
+    # フィルタリング
     filtered_df1 = df[selected_cb1]
-    print(f"filtered_df1{filtered_df1.head(10)}")
+    print(f"filtered_df1:\n{filtered_df1.head(5)}")
 
-    # フィルタリングした DataFrame をセッションに保存
-    session["filtered_df1"] = filtered_df1.to_json(orient="split")
+    try:
+        # 保存
+        save_json_file(filtered_df1, "filtered_df1", overwrite=True, folder=app.config['UPLOAD_FOLDER'])
+        return jsonify({
+            "message": "filtered_df1を保存しました",
+            "selected_cb1": selected_cb1
+        }), 200
 
-    return jsonify({"message": "選択された列でフィルタリングしました"}), 200
-
+    except Exception as e:
+        return jsonify({"error": f"filtered_df1の保存に失敗: {str(e)}"}), 500
 @app.route("/dropdown_value1", methods=["POST"])
 def dropdown_value1():
-    dropdown_value1= request.json.get("dropdown_value1", "")
-    session["dropdown_value1"] = dropdown_value1
-    print(f"選択されたドロップダウン1の値: {dropdown_value1}")
+    try:
+        dropdown_value1= request.json.get("dropdown_value1", "")
+        if not dropdown_value1:
+            return jsonify({"error": "dropdown_value1 が空です"}), 400
+        # dropdown_value1をuploadsに保存
+        save_json_file(dropdown_value1, "dropdown_value1", overwrite=True,folder=app.config['UPLOAD_FOLDER'])
 
-    # セッションからフィルタリングされた DataFrame を取得
-    filtered_df1_json = session.get("filtered_df1")
-    filtered_df1 = pd.read_json(StringIO(filtered_df1_json), orient="split")
-
-    # dropdown_value1列のユニークな値を取得
-    unique_values1 = filtered_df1[dropdown_value1].unique().tolist()
-    print("dropdown_value1列の固有値リスト:")
-    for val in unique_values1:
-        print(f"・{val}")
-    session["unique_values1"] = unique_values1
-    return jsonify({"unique_values1": unique_values1}), 200
+        print(f"選択されたドロップダウン1の値: {dropdown_value1}")
+        # uploadsから filtered_df1.json を取得
+        filtered_df1_path = os.path.join(app.config['UPLOAD_FOLDER'], "filtered_df1.json")
+        if filtered_df1_path is None:
+            return jsonify({"error": "No filtered_df1 found in session"}), 400
+        
+        filtered_df1 = pd.read_json(filtered_df1_path, orient="records")
+        if filtered_df1 is None:
+            return jsonify({"error": "filtered_df1 is None"}), 400
+        # dropdown_value1列のユニークな値を取得
+        unique_values1 = filtered_df1[dropdown_value1].unique().tolist()
+        print("dropdown_value1列の固有値リスト:")
+        for val in unique_values1:
+            print(f"・{val}")
+        save_json_file(unique_values1, "unique_values1", overwrite=True, folder=app.config['UPLOAD_FOLDER'])
+        return jsonify({"message": "unique_values1を保存しました",
+            "unique_values1": unique_values1}), 200
+    except Exception as e:
+        return jsonify({"error": f"Error processing dropdown_value1: {str(e)}"}), 500
     
 @app.route("/selected_cb2", methods=["POST"])
 def selected_cb2():
-    selected_cb2 = request.json.get("selected_cb2", [])
-    print("選択された行名リスト2:")
-    for row in selected_cb2:
-        print(f"・{row}")
+    try: 
+        #Next.jsで選択された行名リストを取得
+        selected_cb2 = request.json.get("selected_cb2", [])
+        print("選択された行名リスト2:")
+        for row in selected_cb2:
+            print(f"・{row}")
 
-    # セッションから DataFrame を取得
-    df_json = session.get("filtered_df1")
-    filtered_df1 = pd.read_json(StringIO(df_json), orient="split")
-    dropdown_value1 = session.get("dropdown_value1")
+        #uploadsからfiltered_df1を取得
+        filtered_df1_path = os.path.join(app.config['UPLOAD_FOLDER'], "filtered_df1.json")
+        if filtered_df1_path is None:
+            return jsonify({"error": "No filtered_df1がNoneまたは無い"}), 400
+        filtered_df1 = pd.read_json(filtered_df1, orient="records")
+        
+        dropdown_value1_path = os.path.join(app.config['UPLOAD_FOLDER'], "dropdown_value1.json")
+        if dropdown_value1_path is None:
+            return jsonify({"error": "No dropdown_value1がNoneまたは無い"}), 400
+        dropdown_value1 = pd.read_json(dropdown_value1_path, typ='records')
 
-    # 選択された行名でフィルタリング
-    filtered_df2 = filtered_df1[filtered_df1[dropdown_value1].isin(selected_cb2)]
-    print(f"filtered_df2{filtered_df2.head(10)}")
-    # フィルタリングした DataFrame をセッションに保存
-    session["filtered_df2"] = filtered_df2.to_json(orient="split")
-
-    return jsonify({"message": "選択された行名でフィルタリングしました"}), 200
+        # 選択された行名でフィルタリング
+        filtered_df2 = filtered_df1[filtered_df1[dropdown_value1].isin(selected_cb2)]
+        print(f"filtered_df2{filtered_df2.head(5)}")
+        # フィルタリングした DataFrame をuploadsに保存
+        save_json_file(filtered_df2, "filtered_df2", overwrite=True, folder=app.config['UPLOAD_FOLDER'])
+        return jsonify({"message": "filtered_df2を保存しました"}), 200 
+    except Exception as e:
+        return jsonify({"error": f"Error processing selected_cb2: {str(e)}"}), 500
 
 @app.route("/dropdown_value2", methods=["POST"])
 def dropdown_value2():
@@ -496,4 +500,4 @@ def export_central_alarm_csv():
 # ---- ポート設定＆起動 ----
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=port, debug=True)
