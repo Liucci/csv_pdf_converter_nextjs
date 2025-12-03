@@ -26,6 +26,7 @@ export default function Home() {
   const [showContainer1, setShowContainer1] = useState(false);
   const [showContainer2, setShowContainer2] = useState(false);
   const [showContainer3, setShowContainer3] = useState(false);
+  const [showCSV, setShowCSV] = useState(false);
 
   const [showDropdown1, setShowDropdown1] = useState(false);
   const [showDropdown2, setShowDropdown2] = useState(false);
@@ -377,7 +378,7 @@ export default function Home() {
       return;
     }
 
-    const blob = await res.blob();
+      const blob = await res.blob();
     const pdfUrl = window.URL.createObjectURL(blob);
 
     // ←↓↓ これが PDF プレビューを開くコード
@@ -386,22 +387,39 @@ export default function Home() {
   catch (err) {
     console.error(err);
   }
+  setShowCSV(true);  // ← ここで CSV ボタンを表示
 };
-  // セントラルアラーム CSV 作成
-  const handleCreateCentralAlarmCSV = async () => {
-    try {
-      const res = await fetch(`${apiUrl}/central_alarm_csv`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ }),
-      });
-    }
-    catch (err) {
-      console.error("送信エラー:", err);
-    }
-  };
+  
+// セントラルアラーム CSV 作成
+const handleCreateCentralAlarmCSV = async () => {
+  try {
+    const res = await fetch(`${apiUrl}/export_central_alarm_csv`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({}),
+    });
 
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+
+    // CSV を Blob として受け取る
+    const blob = await res.blob();
+
+    // ダウンロードリンクを作成してクリック
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "central_alarm.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("送信エラー:", err);
+  }
+};
   return (
     <div className="container py-5">
       <div className="card shadow-sm">
@@ -451,13 +469,15 @@ export default function Home() {
               >
                 PDF作成
               </button>
-
+              {/* CSVボタンはPDF作成後に表示 */}
+              {showCSV && (
               <button
                 className="btn btn-outline-primary"
                 onClick={handleCreateCentralAlarmCSV}
               >
                 CSV作成
               </button>
+              )}
             </div>
           )}
 
