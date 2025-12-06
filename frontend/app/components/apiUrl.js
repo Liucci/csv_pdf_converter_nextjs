@@ -10,6 +10,7 @@ export async function detectApiUrl() {
       : null,
 
     // 本番用: Render の環境変数で指定した backend サービス URL
+    //renderのEnvironment VariablesでNEXT_PUBLIC_API_URLのvalueを　https://csv-pdf-converter-nextjs.onrender.com
     process.env.NEXT_PUBLIC_API_URL,
   ].filter(Boolean);
 

@@ -36,6 +36,14 @@ export default function Home() {
   const [unique_values1, setUniqueValues1] = useState([]);
   const [unique_values2, setUniqueValues2] = useState([]);
 
+  const orderRef1 = useRef();
+  const orderRef2 = useRef();
+  const orderRef3 = useRef();
+  const orderRef4 = useRef();
+
+  const [showOrderSetting, setShowOrderSetting] = useState(false);
+
+
   const [showPdfButton, setShowPdfButton] = useState(false);
 
   const [centralData, setCentralData] = useState([]); // セントラルアラームデータ保存用
@@ -111,11 +119,6 @@ export default function Home() {
     }
   };
 
-/*   // チェックボックス選択
-  const handleCheckboxChange1 = (list) => setSelected1(list);
-  const handleCheckboxChange2 = (list) => setSelected2(list);
-  const handleCheckboxChange3 = (list) => setSelected3(list);
- */  
 //再レンダリングが起きないようにuseRefで一時保存
   const handleCheckboxTempChange1 = (list) => {
     tempSelected1Ref.current = list;
@@ -163,9 +166,6 @@ export default function Home() {
     setTempSelected3([]);
     setIsDirty3(true);
   };
-
-
-
 
     // 適用ボタン：選択列をバックエンドへ送信
   const handleApply1 = async () => {
@@ -218,7 +218,7 @@ export default function Home() {
     const finalList = tempSelected3Ref.current;
     setSelected3(finalList);
     setIsDirty3(false); // ボタンを元の色に戻す
-    setShowPdfButton(true);    // ← PDFボタンを表示
+    setShowOrderSetting(true); // ★ 並び順 UI 表示
     console.log("/selected_cb3へ渡す:", finalList);
     
     try {
@@ -286,9 +286,96 @@ export default function Home() {
     }
   };
 
+  // 列選択ドロップダウンのオプション取得関数
+  //選択した列を他のドロップダウンで選べないようにする
+  const getOptions = (level) => {
+  // 現在の選択値を配列で取得
+  const selectedValues = [
+    orderRef1.current?.value,
+    orderRef2.current?.value,
+    orderRef3.current?.value,
+    orderRef4.current?.value,
+  ];
+
+  // level より上位の選択値だけ除外対象
+  const used = selectedValues.slice(0, level - 1);
+
+  return selected1.filter((col) => !used.includes(col));
+  };
+  // ドロップダウンオプション更新関数
+  const updateDropdownOptions = () => {
+
+  const dropdowns = [
+    { ref: orderRef1, level: 1 },
+    { ref: orderRef2, level: 2 },
+    { ref: orderRef3, level: 3 },
+    { ref: orderRef4, level: 4 },
+  ];
+
+  dropdowns.forEach(({ ref, level }) => {
+    const el = ref.current;
+    if (!el) return;
+
+    const currentValue = el.value;
+    const options = getOptions(level);
+
+    el.innerHTML = "";
+
+    const optEmpty = document.createElement("option");
+    optEmpty.value = "";
+    optEmpty.textContent = "指定なし";
+    el.appendChild(optEmpty);
+
+    options.forEach((col) => {
+      const opt = document.createElement("option");
+      opt.value = col;
+      opt.textContent = col;
+      el.appendChild(opt);
+    });
+
+    // 前の選択が有効なら残す
+    if (options.includes(currentValue)) {
+      el.value = currentValue;
+    } else {
+      el.value = ""; // 選択解除
+    }
+  });
+  };
+  const handleSendOrder = async () => {
+
+    const orderList = [
+      orderRef1.current.value,
+      orderRef2.current.value,
+      orderRef3.current.value,
+      orderRef4.current.value,
+    ].filter(v => v !== "");  // 空は除外
+    setShowPdfButton(true);    // ← PDFボタンを表示    
+
+    
+    console.log("送る並び順:", orderList);
+
+    try {
+      const res = await fetch(`${apiUrl}/set_column_order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ order: orderList }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) console.error("並び順設定エラー:", data.error);
+      else console.log("並び順適用:", data);
+
+    } catch (err) {
+      console.error("送信エラー:", err);
+    }
+  };
+
+
+
   const handleCreatePDF = async () => {
   try {
-    const res = await fetch(`${apiUrl}/filtered_df3_pdf`, {
+    const res = await fetch(`${apiUrl}/filtered_df3_sorted_pdf`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -633,17 +720,74 @@ const handleCreateCentralAlarmCSV = async () => {
                       解除
                     </button>
                   </div>
-                  {showPdfButton && (
-                    <div className="mt-3">
-                      <button className="btn btn-primary" onClick={handleCreatePDF}>
-                        PDF作成
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
           )}
+         {showOrderSetting && (
+            <div className="mt-4 p-3 border rounded">
+
+              <h5>列の並べ替え優先順位設定</h5>
+
+              {/* 第1優先 */}
+              <label>第1優先</label>
+              <select className="form-select mb-3" 
+                ref={orderRef1}
+                onChange={updateDropdownOptions}>
+                <option value="">指定なし</option>
+                {selected1.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+
+              {/* 第2優先 */}
+              <label>第2優先</label>
+              <select className="form-select mb-3"
+               ref={orderRef2}
+                onChange={updateDropdownOptions} >
+                <option value="">指定なし</option>
+                {selected1.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+
+              {/* 第3優先 */}
+              <label>第3優先</label>
+              <select className="form-select mb-3" 
+              ref={orderRef3}
+                onChange={updateDropdownOptions}>
+                <option value="">指定なし</option>
+                {selected1.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+
+              {/* 第4優先 */}
+              <label>第4優先</label>
+              <select className="form-select mb-3"
+               ref={orderRef4}
+                onChange={updateDropdownOptions} >
+                <option value="">指定なし</option>
+                {selected1.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+
+              <button className="btn btn-primary" onClick={handleSendOrder}>
+                並び順を適用
+              </button>
+              {showPdfButton && (
+              <div className="mt-3">
+                <button className="btn btn-primary" onClick={handleCreatePDF}>
+                  PDF作成
+                </button>
+              </div>
+              )}
+
+
+            </div>
+          )}
+
               
           
         </div>
