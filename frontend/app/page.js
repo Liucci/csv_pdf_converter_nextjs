@@ -312,7 +312,8 @@ export default function Home() {
  */  
         // ★ PDF プレビュー用に新しいタブで開く
     window.open(url, "_blank");
-  } catch (err) {
+  } 
+  catch (err) {
     console.error("送信エラー:", err);
   }
   };
