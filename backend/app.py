@@ -385,6 +385,9 @@ def central_alarm():
         central_df["現所在地"] = central_df["現所在地"].str.replace("新　化学療法室", "化学療法室", regex=True)
         central_df["現所在地"] = central_df["現所在地"].str.replace("新　運動療法室", "運動療法室", regex=True) 
         central_df["現所在地"] = central_df["現所在地"].str.replace("新　|階", "", regex=True)  
+        #行の並び替え
+        central_df = central_df.sort_values(by=["現所在地", "型式"])
+        #indexのリセット
         central_df = central_df.reset_index(drop=True)   
         # uploadsにcentral_dfを保存
         save_json_file(central_df, "central_df", overwrite=True, folder=app.config['UPLOAD_FOLDER'])
