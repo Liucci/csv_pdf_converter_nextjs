@@ -380,6 +380,7 @@ def central_alarm():
 
         central_df["現所在地"] = central_df["現所在地"].str.replace(r"新　東4階(小児科)", "東4小児", regex=False)
         central_df["現所在地"] = central_df["現所在地"].str.replace(r"新　東4階(産婦人科)", "東4産", regex=False)
+        central_df["現所在地"] = central_df["現所在地"].str.replace(r"新　東3階(救急)", "東3", regex=False)
         central_df["現所在地"] = central_df["現所在地"].str.replace("血液浄化センター", "血液浄化センター", regex=True)
         central_df["現所在地"] = central_df["現所在地"].str.replace("新　化学療法室", "化学療法室", regex=True)
         central_df["現所在地"] = central_df["現所在地"].str.replace("新　運動療法室", "運動療法室", regex=True) 
