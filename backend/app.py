@@ -342,7 +342,7 @@ def filtered_df3_sorted_pdf():
         print(f"PDF生成中にエラー: {e}")
         return "PDFの生成中にエラーが発生しました", 500
 
-@app.route('/central_alarm', methods=['POST'])
+@app.route("/central_alarm", methods=["POST"])
 def central_alarm():
     try:
         # uploadsからdfを取得
@@ -350,18 +350,20 @@ def central_alarm():
         if df_path is None:
             return jsonify({"error": "dfが無い"}), 400
         df=pd.read_json(df_path, orient="records")
+        print(f"df:{df.head(1)}")
         #特定のデータを除外する
         df_exclude= df[~df["ME.No"].str.contains("貸出",na=False)
                         &~df["現所在地"].str.contains("臨床工学室|手術室|新　ＭＥ室",na=False)
                         ]
+        print(f"df_exclude:{df_exclude.head(1)}")
 
         column_name1="現所在地"
         column_name2="機器名称"
         column_name3="型式"
-        column_unique_list1=["新　西2階","新　西4階","新　西5階","新　西6階","新　西7階","新　東3階","HCU","新　東4階(小児科)","新　NICU",
+        column_unique_list1=["新　西2階","新　西4階","新　西5階","新　西6階","新　西7階","新　東3階","新　東3階(救急)","HCU","新　東4階(小児科)","新　NICU",
                                 "HCU","新　東4階(産婦人科)","新　東5階","新　東6階","新　東7階","新　SCU","新　CCU","新　臨床工学室",
-                                "新　ＭＥ室","新　ICU","新　CT室","新　内視鏡室","新　化学療法室","新　運動療法室","新　中央処置室","新　外来A",
-                                "血液浄化センター","新　手術室","新　救急外来","新　内視鏡室"]
+                                "新　ＭＥ室","新　ICU","新　CT室","新　内視鏡室","新　化学療法室","新　運動療法室","新　中央処置室","新　外来A","新　外来B","新　外来C","新　外来D",
+                                "血液浄化センター","新　手術室","新　救急外来","初療室","新　内視鏡室"]
         #column_unique_list2=["送信機","ベッドサイドモニタ","セントラルモニタ","医用テレメータ"]
         column_unique_list3=["セントラルモニタ","セントラルモニター","医用テレメータ","医用テレメーター"]
         column_unique_list4=["現所在地","型式"]
@@ -373,6 +375,8 @@ def central_alarm():
                                                                     column_unique_list4,
                                                                     doubling_col1_and_col3= False,
                                                                     marge_column3=False)
+        
+        print(f"central_df before cleaning:\n{central_df.head(1)}")
 
         central_df["現所在地"] = central_df["現所在地"].str.replace(r"新　東4階(小児科)", "東4小児", regex=False)
         central_df["現所在地"] = central_df["現所在地"].str.replace(r"新　東4階(産婦人科)", "東4産", regex=False)
