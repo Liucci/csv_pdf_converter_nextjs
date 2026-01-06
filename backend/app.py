@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for, session,send_from_directory,send_file, jsonify, after_this_request
+from flask import Flask, json, request, render_template, redirect, url_for, session,send_from_directory,send_file, jsonify, after_this_request
 import os
 import pandas as pd
 import tempfile
@@ -455,18 +455,39 @@ def make_central_alarm_df():
         save_json_file(central_alarm_df, "central_alarm_df", overwrite=True, folder=app.config['UPLOAD_FOLDER'])
         print(f"central_alarm_df:\n{central_alarm_df.head(5)}")
 
-        return export_central_alarm_pdf()
+        return jsonify({"message": "central_alarm_dfを保存しました"}), 200
+
     except Exception as e:
         return jsonify({"error": f"Error processing make_central_alarm_df: {str(e)}"}), 500
 
-@app.route('/export_central_alarm_pdf', methods=['GET'])
+@app.route('/make_header_footer', methods=['POST', 'OPTIONS'])
+def make_header_footer():
+    try:
+                # OPTIONS に応答（プリフライト用）
+        if request.method == "OPTIONS":
+            return "", 200
+        
+        #jsのフォームデータのheader_textとfooter_textを取得
+        data = request.get_json()
+        header_text = data.get("header_text")
+        footer_text = data.get("footer_text")
+        print(f"header_text:{header_text}")
+        print(f"footer_text:{footer_text}")
+        # uploadsにheader_textとfooter_textを保存
+        save_json_file(header_text, "header_text", overwrite=True, folder=app.config['UPLOAD_FOLDER'])
+        save_json_file(footer_text, "footer_text", overwrite=True, folder=app.config['UPLOAD_FOLDER'])
+        return jsonify({"message": "header_textとfooter_textを保存しました"}), 200
+    except Exception as e:
+        return jsonify({"error": f"Error processing make_header_footer: {str(e)}"}), 500
+
+@app.route('/export_central_alarm_pdf', methods=['POST'])
 def export_central_alarm_pdf():
-    # セッションから central_alarm_df を復元
+    # uploadsフォルダから central_alarm_df を復元
     central_alarm_df_path = os.path.join(app.config['UPLOAD_FOLDER'], "central_alarm_df.json")
     if central_alarm_df_path is None:
         return jsonify({"error": "central_alarm_dfが無い"}), 400
     central_alarm_df = pd.read_json(central_alarm_df_path, orient="records")
-    
+
     # 中間点で2分割（奇数対応）
     mid = len(central_alarm_df) // 2 + (len(central_alarm_df) % 2)
     df_left = central_alarm_df.iloc[:mid].reset_index(drop=True)
@@ -515,13 +536,21 @@ def export_central_alarm_pdf():
     
     print(f"pdf_table_list:{pdf_table_list}")
     print(type(pdf_table_list))
-    
+    # uploadsからheader_textとfooter_textを取得
+    header_text_path = os.path.join(app.config['UPLOAD_FOLDER'], "header_text.json")
+    footer_text_path = os.path.join(app.config['UPLOAD_FOLDER'], "footer_text.json")
+
+    with open(header_text_path, "r", encoding="utf-8") as f:
+        header_text = json.load(f)
+    with open(footer_text_path, "r", encoding="utf-8") as f:
+        footer_text = json.load(f)
+
     export_pdf.build_PDFtables_to_pdf(pdf_table_list,
                                                 buffer,
                                                 main_title="セントラルモニタアラーム一覧",
                                                 sub_title=None,
-                                                header_text=None,
-                                                footer_text="集中管理部",                                                                            
+                                                header_text=header_text,
+                                                footer_text=footer_text,                                                                            
                                                 landscape_mode=False,                                                                            
                                                 )
     buffer.seek(0)  # 先頭に戻す
@@ -561,5 +590,6 @@ def export_central_alarm_csv():
 
 # ---- ポート設定＆起動 ----
 if __name__ == "__main__":
+    cleanup_startup()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)

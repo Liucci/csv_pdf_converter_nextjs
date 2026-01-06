@@ -47,6 +47,8 @@ export default function Home() {
   const [showPdfButton, setShowPdfButton] = useState(false);
 
   const [centralData, setCentralData] = useState([]); // セントラルアラームデータ保存用
+  const [pdfHeader, setPdfHeader] = useState("");
+  const [pdfFooter, setPdfFooter] = useState("");
 
   const [apiUrl, setApiUrl] = useState("");
 
@@ -428,11 +430,27 @@ export default function Home() {
 // セントラルアラーム PDF 作成
   const handleCreateCentralAlarmPDF = async () => {
   try {
-    // 現在表示されているテーブルの情報を収集
-    const rows = document.querySelectorAll("tbody tr");
+
+      const res = await fetch(`${apiUrl}/make_header_footer`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          header_text: pdfHeader,
+          footer_text: pdfFooter,
+        }),
+      });
+      console.log("送信された header_text:", pdfHeader);
+      console.log("送信された footer_text:", pdfFooter);
+      const data = await res.json();
+      console.log("バックエンド応答:", data);
+      // 現在表示されているテーブルの情報を収集
+      const rows = document.querySelectorAll("tbody tr");
 
     let deleteRows = [];
     let volumeList = [];
+
 
     rows.forEach((tr, index) => {
       const checkbox = tr.querySelector("input[type='checkbox']");
@@ -451,25 +469,31 @@ export default function Home() {
     console.log("削除行:", deleteRows);
     console.log("音量リスト:", volumeList);
 
-    const res = await fetch(`${apiUrl}/make_central_alarm_df`, {
+    const res2 = await fetch(`${apiUrl}/make_central_alarm_df`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({
         volume: volumeList,
         delete_rows: deleteRows,
       }),
     });
+    const data2 = await res2.json();
+    console.log("make_central_alarm_df 応答:", data2);
 
-    if (!res.ok) {
+    const res3 = await fetch(`${apiUrl}/export_central_alarm_pdf`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (!res3.ok) {
       console.error("PDF生成エラー");
       return;
     }
-
-      const blob = await res.blob();
+    console.log("PDF生成成功");
+    const blob = await res3.blob();
     const pdfUrl = window.URL.createObjectURL(blob);
 
-    // ←↓↓ これが PDF プレビューを開くコード
+    // PDF プレビューを開くコード
     window.open(pdfUrl, "_blank");
   } 
   catch (err) {
@@ -536,7 +560,7 @@ const handleCreateCentralAlarmCSV = async () => {
 
           {/* 抽出ボタン */}
           {filename && (
-            <div className="mt-3 d-flex gap-2">
+            <div className="mt-3 d-flex gap-3">
               <button className="btn btn-success" onClick={handleExtract}>
                 抽出
               </button>
@@ -550,7 +574,36 @@ const handleCreateCentralAlarmCSV = async () => {
           <CentralAlarmTable data={centralData} />
           {/* centralData があるときだけ PDF / CSV ボタンを表示 */}
           {centralData.length > 0 && (
-            <div className="mt-3 d-flex gap-2">
+            <div className="mt-3">
+
+                  {/* ヘッダー・フッター入力欄 */}
+    <div className="mb-3">
+      <div className="mb-2">
+        <label className="form-label">PDFヘッダー</label>
+        <input
+          type="text"
+          style={{ width: "300px" }}
+          className="form-control"
+          placeholder="例：部署名"
+          value={pdfHeader}
+          onChange={(e) => setPdfHeader(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label className="form-label">PDFフッター</label>
+        <input
+          type="text"
+          style={{ width: "300px" }}
+          className="form-control"
+          placeholder="例：委員会名等　作成日は自動挿入"
+          value={pdfFooter}
+          onChange={(e) => setPdfFooter(e.target.value)}
+        />
+      </div>
+    </div>
+            <div className="mt-3 d-flex gap-3">
+
               <button
                 className="btn btn-outline-primary"
                 onClick={handleCreateCentralAlarmPDF}
@@ -566,6 +619,7 @@ const handleCreateCentralAlarmCSV = async () => {
                 CSV作成
               </button>
               )}
+            </div>
             </div>
           )}
 
@@ -725,13 +779,16 @@ const handleCreateCentralAlarmCSV = async () => {
             </div>
           )}
          {showOrderSetting && (
-            <div className="mt-4 p-3 border rounded">
+            <div className="mt-4 p-3 border rounded"
+             style={{ maxWidth: "400px" }}>
+              
 
               <h5>列の並べ替え優先順位設定</h5>
 
               {/* 第1優先 */}
               <label>第1優先</label>
               <select className="form-select mb-3" 
+              style={{ width: "300px" }}
                 ref={orderRef1}
                 onChange={updateDropdownOptions}>
                 <option value="">指定なし</option>
@@ -743,6 +800,7 @@ const handleCreateCentralAlarmCSV = async () => {
               {/* 第2優先 */}
               <label>第2優先</label>
               <select className="form-select mb-3"
+              style={{ width: "300px" }}
                ref={orderRef2}
                 onChange={updateDropdownOptions} >
                 <option value="">指定なし</option>
@@ -754,6 +812,7 @@ const handleCreateCentralAlarmCSV = async () => {
               {/* 第3優先 */}
               <label>第3優先</label>
               <select className="form-select mb-3" 
+              style={{ width: "300px" }}
               ref={orderRef3}
                 onChange={updateDropdownOptions}>
                 <option value="">指定なし</option>
@@ -765,6 +824,7 @@ const handleCreateCentralAlarmCSV = async () => {
               {/* 第4優先 */}
               <label>第4優先</label>
               <select className="form-select mb-3"
+              style={{ width: "300px" }}
                ref={orderRef4}
                 onChange={updateDropdownOptions} >
                 <option value="">指定なし</option>
