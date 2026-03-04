@@ -33,7 +33,7 @@ CORS(app, supports_credentials=True, origins=[
 if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
     # Render環境
     UPLOAD_FOLDER = "/tmp/uploads"
-    app.config["DEBUG"] = False
+    app.config["DEBUG"] = True
 else:
     # ローカル環境
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
