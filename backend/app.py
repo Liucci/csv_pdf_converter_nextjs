@@ -99,20 +99,18 @@ def upload():
 def manual_filter():
     try:
         df_path = os.path.join(app.config['UPLOAD_FOLDER'], "df.json")
-        if df_path is None:
-            return jsonify({"error": "dfが無い"}), 400
-            
-        else:
-            #pathからdfを取得
-            df = pd.read_json(df_path, orient="records")
-            print(f"df:{df.head(5)}")
 
-            #コンテナ１に表示させる列名リスト
+        if not os.path.exists(df_path):
+            return jsonify({"error": "dfが無い"}), 400
+
+        df = pd.read_json(df_path, orient="split")
+        print("df head:")
+        print(df.head())
+
         columns_name_list_1 = df.columns.tolist()
-        print("columns_name_list_1:")
-        for a in columns_name_list_1:
-            print(f"・{a}")
+
         return jsonify({"columns": columns_name_list_1}), 200
+
     except Exception as e:
         return jsonify({"error": f"Error processing manual_filter: {str(e)}"}), 500
 
