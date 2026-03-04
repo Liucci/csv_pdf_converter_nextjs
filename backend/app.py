@@ -272,23 +272,44 @@ def selected_cb3():
 def set_column_order():
     data = request.get_json()
     order = data.get("order", [])
-    
+
     filtered_df3_path = os.path.join(app.config['UPLOAD_FOLDER'], "filtered_df3.json")
-    if filtered_df3_path is None:
+
+    if not os.path.exists(filtered_df3_path):
         print("filtered_df3.jsonが無い")
         return jsonify({"error": "filtered_df3が無い"}), 400
-    
+
     filtered_df3 = pd.read_json(filtered_df3_path, orient="records")
 
+    # --- 有効な列のみ抽出 ---
     valid_cols = [c for c in order if c in filtered_df3.columns]
     remaining_cols = [c for c in filtered_df3.columns if c not in valid_cols]
+    print(f"有効な列: {valid_cols}")
+    print(f"残りの列: {remaining_cols}")
+    # =========================
+    # 🔥 ここで行を並び替える
+    # =========================
+    if valid_cols:
+        filtered_df3 = filtered_df3.sort_values(
+            by=valid_cols,
+            ascending=True,
+            na_position="last"
+        )
 
+    # --- 列の並び替え ---
     new_order = valid_cols + remaining_cols
     filtered_df3_sorted = filtered_df3[new_order]
-    print(f"filtered_df3_sorted:\n{filtered_df3_sorted.head(5)}")
-    save_json_file(filtered_df3_sorted, "filtered_df3_sorted", overwrite=True, folder=app.config['UPLOAD_FOLDER'])
-    return jsonify({"message": "filtered_df3_sortedを保存しました"}), 200
 
+    print(f"filtered_df3_sorted:\n{filtered_df3_sorted.head(5)}")
+
+    save_json_file(
+        filtered_df3_sorted,
+        "filtered_df3_sorted",
+        overwrite=True,
+        folder=app.config['UPLOAD_FOLDER']
+    )
+
+    return jsonify({"message": "filtered_df3_sortedを保存しました"}), 200
 
 @app.route("/filtered_df3_sorted_pdf", methods=["POST", "OPTIONS"])
 def filtered_df3_sorted_pdf():
