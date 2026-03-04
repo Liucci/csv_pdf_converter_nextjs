@@ -85,6 +85,7 @@ def upload():
         #元のCSVファイルをuploadsフォルダに保存
         save_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
         file.save(save_path)
+        print("file size:", os.path.getsize(save_path))
 
         # df を uploads フォルダに JSON で保存
         df = csv_reader.load_csv(save_path)
