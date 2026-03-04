@@ -114,7 +114,7 @@ def manual_filter():
             preview = f.read(200)
             print("JSON preview:", preview, flush=True)
 
-        df = pd.read_json(df_path, orient="split")
+        df = pd.read_json(df_path, orient="records")
 
         print("df shape:", df.shape, flush=True)
 
