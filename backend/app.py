@@ -29,11 +29,19 @@ CORS(app, supports_credentials=True, origins=[
 
 #uploadsフォルダの設定
 # backend フォルダを基準に uploads フォルダのパスを指定
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
+# ===== 環境判定 =====
+if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
+    # Render環境
+    UPLOAD_FOLDER = "/tmp/uploads"
+    app.config["DEBUG"] = False
+else:
+    # ローカル環境
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
+    app.config["DEBUG"] = True
+
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-for-local")
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['DEBUG'] = True
 
 
 # --- 起動時クリーニング ---
@@ -68,9 +76,10 @@ def ping():
 def upload():
     try:
         #Next.jsから送信されたファイルを取得
-        file = request.files["file"]
+        
         if "file" not in request.files:
             return jsonify({"error": "No file uploaded"}), 400
+        file = request.files["file"]
         if file.filename == "":
             return jsonify({"error": "No file selected"}), 400
         #元のCSVファイルをuploadsフォルダに保存
