@@ -98,22 +98,32 @@ def upload():
 @app.route("/manual_filter", methods=["POST"])
 def manual_filter():
     try:
+        import traceback
+
         df_path = os.path.join(app.config['UPLOAD_FOLDER'], "df.json")
+
+        print("UPLOAD_FOLDER:", app.config['UPLOAD_FOLDER'], flush=True)
+        print("Files:", os.listdir(app.config['UPLOAD_FOLDER']), flush=True)
+        print("df_path:", df_path, flush=True)
+        print("exists:", os.path.exists(df_path), flush=True)
 
         if not os.path.exists(df_path):
             return jsonify({"error": "dfが無い"}), 400
 
+        with open(df_path, "r") as f:
+            preview = f.read(200)
+            print("JSON preview:", preview, flush=True)
+
         df = pd.read_json(df_path, orient="split")
-        print("df head:")
-        print(df.head())
 
-        columns_name_list_1 = df.columns.tolist()
+        print("df shape:", df.shape, flush=True)
 
-        return jsonify({"columns": columns_name_list_1}), 200
+        return jsonify({"columns": df.columns.tolist()}), 200
 
     except Exception as e:
-        return jsonify({"error": f"Error processing manual_filter: {str(e)}"}), 500
-
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    
 @app.route("/selected_cb1", methods=["POST"])
 def selected_cb1_route():
     try:
