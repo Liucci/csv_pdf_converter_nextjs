@@ -171,14 +171,16 @@ def dropdown_value1():
         print(f"選択されたドロップダウン1の値: {dropdown_value1}")
         # uploadsから filtered_df1.json を取得
         filtered_df1_path = os.path.join(app.config['UPLOAD_FOLDER'], "filtered_df1.json")
+        print(f"filtered_df1_path:{filtered_df1_path}")
         if filtered_df1_path is None:
             return jsonify({"error": "filtered_df1が無い"}), 400
         
         filtered_df1 = pd.read_json(filtered_df1_path, orient="records")
         if filtered_df1 is None:
             return jsonify({"error": "filtered_df1 is None"}), 400
+        print(f"filtered_df1:{filtered_df1.head(5)}")
         # dropdown_value1列のユニークな値を取得
-        unique_values1 = filtered_df1[dropdown_value1].unique().tolist()
+        unique_values1 = filtered_df1[dropdown_value1].dropna().unique().tolist()
         # unique_values1を昇順でソート
         unique_values1.sort()
         print("unique_values1:")
@@ -246,7 +248,7 @@ def dropdown_value2():
 
         # dropdown_value2列のユニークな値を取得
         unique_values2 = filtered_df2[dropdown_value2].unique().tolist()
-        
+        unique_values2.sort()
         if unique_values2:
             print(f"unique_values2:\n")
             for val in unique_values2:
