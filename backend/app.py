@@ -22,7 +22,8 @@ CORS(app, supports_credentials=True, origins=[
     "https://csv-pdf-converter-nextjs-1.onrender.com",
     "https://csv-pdf-converter-nextjs.onrender.com",
     "http://localhost:3000",
-    "http://10.132.154.86:3000"
+    "http://10.132.154.86:3000",
+    "http://10.132.154.51:3000"
      # 開発用
 ])
 
@@ -110,9 +111,7 @@ def manual_filter():
         if not os.path.exists(df_path):
             return jsonify({"error": "dfが無い"}), 400
 
-        with open(df_path, "r") as f:
-            preview = f.read(200)
-            print("JSON preview:", preview, flush=True)
+
 
         df = pd.read_json(df_path, orient="records")
 
