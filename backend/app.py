@@ -272,7 +272,7 @@ def selected_cb3():
         dropdown_value2_path = os.path.join(app.config['UPLOAD_FOLDER'], "dropdown_value2.json")
         if dropdown_value2_path is None:
             return jsonify({"error": "dropdown_value2が無い"}), 400
-        dropdown_value2 = pd.read_json(dropdown_value2_path, typ='records')
+        dropdown_value2 = pd.read_json(dropdown_value2_path, orient="records")
         print(f"dropdown_value2:{dropdown_value2}")
 
         # 選択された行名でフィルタリング
