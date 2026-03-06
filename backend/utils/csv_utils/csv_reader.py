@@ -3,6 +3,7 @@ import chardet
 
 #元となるcsvファイルを読み込みもととなるdfを返す関数
 def load_csv(file_path):
+    """    
     try:
         with open(file_path, "rb") as f: #open関数でバイナリモードでファイルを開く
             result= chardet.detect(f.read())#chardet.detectでファイルの文字コードを判定
@@ -13,7 +14,19 @@ def load_csv(file_path):
     except Exception as e:
         print(f"CSVの読み込みに失敗しました:{e}")
         return None
+    """
+    
+    #3つのエンコードを指定して、順番に試す
+    encodings = ["cp932", "utf-8", "shift_jis"]
+    for enc in encodings:
+        try:
+            df = pd.read_csv(file_path, encoding=enc)
+            print("encoding:", enc)
+            return df
+        except:
+            continue
 
+    raise Exception("CSV encoding not supported")
 #元ファイルからヘッダー部分だけ返す関数
 def read_header(file_path):
     try:
