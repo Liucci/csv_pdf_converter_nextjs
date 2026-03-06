@@ -208,7 +208,7 @@ def selected_cb2():
         dropdown_value1_path = os.path.join(app.config['UPLOAD_FOLDER'], "dropdown_value1.json")
         if dropdown_value1_path is None:
             return jsonify({"error": "dropdown_value1が無い"}), 400
-        dropdown_value1 = pd.read_json(dropdown_value1_path, typ='records')
+        dropdown_value1 = pd.read_json(dropdown_value1_path, orient="records")
 
         # 選択された行名でフィルタリング
         #dropdown_value1はDataFrame型なのでilocで値を取り出す
