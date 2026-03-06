@@ -179,6 +179,8 @@ def dropdown_value1():
             return jsonify({"error": "filtered_df1 is None"}), 400
         # dropdown_value1列のユニークな値を取得
         unique_values1 = filtered_df1[dropdown_value1].unique().tolist()
+        # unique_values1を昇順でソート
+        unique_values1.sort()
         print("unique_values1:")
         for val in unique_values1:
             print(f"・{val}")
@@ -208,12 +210,13 @@ def selected_cb2():
         dropdown_value1_path = os.path.join(app.config['UPLOAD_FOLDER'], "dropdown_value1.json")
         if dropdown_value1_path is None:
             return jsonify({"error": "dropdown_value1が無い"}), 400
-        dropdown_value1 = pd.read_json(dropdown_value1_path, orient="records")
-
+        print(f"dropdown_value1_path:{dropdown_value1_path}")
+        with open(dropdown_value1_path, "r", encoding="utf-8") as f:
+            dropdown_value1 = json.load(f)
+        print(f"dropdown_value1:{dropdown_value1}")
         # 選択された行名でフィルタリング
-        #dropdown_value1はDataFrame型なのでilocで値を取り出す
-        filtered_df2 = filtered_df1[filtered_df1[dropdown_value1.iloc[0]].isin(selected_cb2)]
-        #print(f"dropdown_value1:{dropdown_value1}")
+        filtered_df2 = filtered_df1[filtered_df1[dropdown_value1].isin(selected_cb2)]
+        
         #print(f"selected_cb2:{selected_cb2}")
         #print(filtered_df1[dropdown_value1].isin(selected_cb2))
         print(f"filtered_df2{filtered_df2.head(5)}")
@@ -272,12 +275,12 @@ def selected_cb3():
         dropdown_value2_path = os.path.join(app.config['UPLOAD_FOLDER'], "dropdown_value2.json")
         if dropdown_value2_path is None:
             return jsonify({"error": "dropdown_value2が無い"}), 400
-        dropdown_value2 = pd.read_json(dropdown_value2_path, orient="records")
+        with open(dropdown_value2_path, "r", encoding="utf-8") as f:
+            dropdown_value2 = json.load(f)
         print(f"dropdown_value2:{dropdown_value2}")
 
         # 選択された行名でフィルタリング
-        #dropdown_value2はDataFrame型なのでilocで値を取り出す
-        filtered_df3 = filtered_df2[filtered_df2[dropdown_value2.iloc[0]].isin(selected_cb3)]
+        filtered_df3 = filtered_df2[filtered_df2[dropdown_value2].isin(selected_cb3)]
         print(f"filtered_df3{filtered_df3.head(5)}")
         # フィルタリングした DataFrame をuploadsに保存
         save_json_file(filtered_df3, "filtered_df3", overwrite=True, folder=app.config['UPLOAD_FOLDER'])
