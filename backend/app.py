@@ -247,7 +247,7 @@ def dropdown_value2():
         print(f"filtered_df2:{filtered_df2}")
 
         # dropdown_value2列のユニークな値を取得
-        unique_values2 = filtered_df2[dropdown_value2].unique().tolist()
+        unique_values2 = filtered_df2[dropdown_value2].dropna().unique().tolist()
         unique_values2.sort()
         if unique_values2:
             print(f"unique_values2:\n")
